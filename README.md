@@ -1,8 +1,15 @@
-# Arbitrage Rémunération SAS
+# Arbitrage Rémunération / Dividendes SAS
 
-Application web visuelle (en français) de simulation d’arbitrage de rémunération de fin d’exercice d’un président de SAS assimilé salarié.
+Outil visuel d’aide à la décision pour cabinet comptable.
 
-## Démarrage rapide (sans dépendances externes)
+## Finalité
+Calculer automatiquement l’arbitrage optimal entre **rémunération complémentaire** et **dividendes** pour un président de SAS assimilé salarié, selon un objectif métier :
+- maximiser le net,
+- préserver la trésorerie,
+- équilibre,
+- protection sociale.
+
+## Démarrage
 ```bash
 npm run lint
 npm run build
@@ -10,22 +17,22 @@ npm run dev
 ```
 Puis ouvrir `http://127.0.0.1:3000/web/`.
 
-## Pourquoi ce mode
-L’environnement courant bloque l’accès au registre npm (403). Cette version est donc livrée en **mode statique autonome** :
-- aucune dépendance npm à installer,
-- exécution immédiate,
-- moteur de calcul paramétrable côté front,
-- persistance locale (`localStorage`).
+## Architecture (web statique modulaire)
+- `web/js/simulation.js` : moteur de simulation (coût, IS, dividendes, IR, trésorerie, trimestres, TMI)
+- `web/js/optimizer.js` : moteur d’optimisation et recommandation
+- `web/js/format.js` : formatage français
+- `web/js/ui.js` : rendu interface premium
+- `web/js/constants.js` : hypothèses et paramètres par défaut
+- `web/js/state.js` : état et persistance locale
+- `web/js/main.js` : orchestration
 
-## Modules inclus
-- Dashboard
-- Dossier / paramètres généraux
-- Paramètres de calcul (modifiables)
-- Création de scénarios
-- Comparaison multi-scénarios + scénario recommandé
-- Visualisations
-- Synthèse imprimable
-- Annexes techniques
+## Restitution
+L’interface affiche uniquement 3 options :
+1. Option recommandée
+2. Option prudente
+3. Option maximisation du net
+
+Avec comparaison visuelle, alertes métier, synthèse rédigée automatiquement et hypothèses explicites.
 
 ## Avertissement
 Les résultats sont fournis à titre indicatif sur la base des hypothèses retenues et doivent être validés par un professionnel.

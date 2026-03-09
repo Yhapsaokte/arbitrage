@@ -1,6 +1,5 @@
-import { mkdirSync, copyFileSync } from 'node:fs';
+import { mkdirSync, cpSync } from 'node:fs';
+
 mkdirSync('dist', { recursive: true });
-copyFileSync('web/index.html', 'dist/index.html');
-copyFileSync('web/styles.css', 'dist/styles.css');
-copyFileSync('web/app.js', 'dist/app.js');
+cpSync('web', 'dist', { recursive: true });
 console.log('Build statique OK -> dist/');
