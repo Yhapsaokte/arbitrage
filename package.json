@@ -1,0 +1,10 @@
+{
+  "name": "arbitrage-remuneration-sas",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 3000",
+    "build": "node scripts/build.mjs",
+    "lint": "node scripts/lint.mjs"
+  }
+}
