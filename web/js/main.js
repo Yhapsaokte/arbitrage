@@ -1,4 +1,4 @@
-import { findBestArbitrage } from './optimizer.js';
+import { pickRecommendedOptions } from './optimizer.js';
 import { loadState, saveState, state } from './state.js';
 import { render } from './ui.js';
 
@@ -15,7 +15,7 @@ const setByPath = (obj, path, value) => {
 };
 
 const rerender = () => {
-  const result = findBestArbitrage(state);
+  const result = pickRecommendedOptions(state);
   render(root, state, result, (path, value) => {
     setByPath(state, path, value);
     saveState();

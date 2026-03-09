@@ -1,4 +1,5 @@
 export const DEFAULT_INPUT = {
+  ui: { activeTab: 'dashboard' },
   societe: {
     raisonSociale: 'Aster Ingénierie Conseil SAS',
     exercice: '2026',
@@ -31,6 +32,7 @@ export const DEFAULT_INPUT = {
     plancherRemuneration: 0,
     plafondRemuneration: 70000,
     seuilTresorerieResiduelle: 15000,
+    niveauxDividendes: 5,
     baremeIR: [
       { min: 0, max: 11497, taux: 0 },
       { min: 11498, max: 29315, taux: 0.11 },
@@ -46,4 +48,15 @@ export const OBJECTIFS = [
   { value: 'tresorerie', label: 'Préserver la trésorerie' },
   { value: 'equilibre', label: 'Équilibre' },
   { value: 'social', label: 'Protection sociale' },
+];
+
+export const TABS = [
+  ['dashboard', 'Dashboard'],
+  ['comparaison', 'Comparaison'],
+  ['flux', 'Flux financiers'],
+  ['social', 'Cotisations sociales'],
+  ['fiscalite', 'Fiscalité'],
+  ['parametres', 'Paramètres'],
+  ['synthese', 'Synthèse'],
+  ['annexes', 'Annexes techniques'],
 ];
