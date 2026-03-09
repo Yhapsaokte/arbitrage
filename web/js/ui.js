@@ -81,31 +81,74 @@ export const render = (root, state, result, onUpdate) => {
   <header class="topbar card">
     <div>
       <h1>Arbitrage Rémunération / Dividendes SAS</h1>
-      <p>Application d’aide à la décision cabinet — optimisation automatique transparente.</p>
+      <p>Application d’aide à la décision cabinet — optimisation automatique et simulation manuelle.</p>
     </div>
     <div class="badge warn">Les résultats sont fournis à titre indicatif et doivent être validés par un professionnel.</div>
   </header>
 
   <nav class="tabs card">${TABS.map(([id, label]) => `<button class="tab ${state.ui.activeTab === id ? 'active' : ''}" data-tab="${id}">${label}</button>`).join('')}</nav>
 
-  <section class="view ${state.ui.activeTab === 'dashboard' ? 'on' : ''}" id="dashboard">
+  <section class="view ${state.ui.activeTab === 'entrees' ? 'on' : ''}">
+    <article class="card"><h2>Entrées du dossier</h2><p>Modifiez librement les données ci-dessous : tous les calculs sont recalculés instantanément.</p>
+      <h3>Société</h3>
+      <div class="grid four">
+        <label>Raison sociale<input data-k="societe.raisonSociale" placeholder="Nom de la société" value="${state.societe.raisonSociale}"/></label>
+        <label>Exercice<input data-k="societe.exercice" placeholder="2026" value="${state.societe.exercice}"/></label>
+        <label>Activité<input data-k="societe.activite" placeholder="Activité" value="${state.societe.activite}"/></label>
+        <label>Résultat provisoire (€)<input type="number" data-k="societe.resultatProvisoire" value="${state.societe.resultatProvisoire}"/></label>
+        <label>Trésorerie disponible (€)<input type="number" data-k="societe.tresorerieDisponible" value="${state.societe.tresorerieDisponible}"/></label>
+        <label>Rémunération déjà versée (€)<input type="number" data-k="societe.remunerationDejaVersee" value="${state.societe.remunerationDejaVersee}"/></label>
+        <label>Réserve minimale (€)<input type="number" data-k="societe.reserveSecurite" value="${state.societe.reserveSecurite}"/></label>
+      </div>
+
+      <h3>Foyer fiscal</h3>
+      <div class="grid four">
+        <label>Nombre de parts<input type="number" data-k="foyer.parts" value="${state.foyer.parts}"/></label>
+        <label>Salaire conjoint (€)<input type="number" data-k="foyer.salaireConjoint" value="${state.foyer.salaireConjoint}"/></label>
+        <label>Revenus LMNP (€)<input type="number" data-k="foyer.revenusLMNP" value="${state.foyer.revenusLMNP}"/></label>
+        <label>Autres revenus (€)<input type="number" data-k="foyer.autresRevenus" value="${state.foyer.autresRevenus}"/></label>
+      </div>
+
+      <h3>Simulation</h3>
+      <div class="grid four">
+        <label>Objectif<select data-k="objectif">${OBJECTIFS.map((o) => `<option value="${o.value}" ${state.objectif === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>
+        <label>Mode
+          <select data-k="simulation.mode">
+            <option value="automatique" ${state.simulation.mode === 'automatique' ? 'selected' : ''}>Optimisation automatique</option>
+            <option value="manuel" ${state.simulation.mode === 'manuel' ? 'selected' : ''}>Simulation manuelle</option>
+          </select>
+        </label>
+        <label>Rémunération brute complémentaire manuelle (€)<input type="number" data-k="simulation.remunerationBruteManuelle" value="${state.simulation.remunerationBruteManuelle}" ${state.simulation.mode === 'manuel' ? '' : 'disabled'} /></label>
+        <label>Dividende manuel activé
+          <select data-k="simulation.dividendeManuelActif" ${state.simulation.mode === 'manuel' ? '' : 'disabled'}>
+            <option value="false" ${!state.simulation.dividendeManuelActif ? 'selected' : ''}>Non (auto)</option>
+            <option value="true" ${state.simulation.dividendeManuelActif ? 'selected' : ''}>Oui</option>
+          </select>
+        </label>
+        <label>Dividende manuel (€)<input type="number" data-k="simulation.dividendeManuel" value="${state.simulation.dividendeManuel}" ${(state.simulation.mode === 'manuel' && state.simulation.dividendeManuelActif) ? '' : 'disabled'} /></label>
+      </div>
+      <p class="note">Mode manuel : l’application calcule à partir de votre rémunération brute saisie, et du dividende saisi si activé (avec plafonnement de cohérence).</p>
+    </article>
+  </section>
+
+  <section class="view ${state.ui.activeTab === 'dashboard' ? 'on' : ''}">
     <div class="grid three">
       <article class="card"><h3>Dossier</h3><p>${state.societe.raisonSociale}</p><small>Exercice ${state.societe.exercice} • ${state.societe.activite}</small></article>
-      <article class="card"><h3>Objectif retenu</h3><p>${OBJECTIFS.find((o) => o.value === state.objectif)?.label}</p></article>
+      <article class="card"><h3>Objectif retenu</h3><p>${OBJECTIFS.find((o) => o.value === state.objectif)?.label}</p><small>Mode: ${state.simulation.mode === 'automatique' ? 'Optimisation automatique' : 'Simulation manuelle'}</small></article>
       <article class="card"><h3>Trésorerie disponible</h3><p>${euro(state.societe.tresorerieDisponible)}</p><small>Réserve minimale: ${euro(state.societe.reserveSecurite)}</small></article>
     </div>
-    <article class="card spotlight"><h2>Arbitrage recommandé</h2><p>Au regard du résultat provisoire, de la trésorerie disponible, de la rémunération déjà versée et de l’objectif retenu, l’option recommandée consiste à retenir une rémunération complémentaire de <strong>${euro(rec.remunerationBrute)}</strong> et une distribution de dividendes de <strong>${euro(rec.dividends.dividendeVerse)}</strong>. Cette option aboutit à un montant perçu par le foyer de <strong>${euro(rec.netTotalFoyer)}</strong>, avec une trésorerie restante de <strong>${euro(rec.tresorerieRestante)}</strong>, un IS de <strong>${euro(rec.corporateTax.isTotal)}</strong> et <strong>${rec.retraite.trimestresValides}/4</strong> trimestres validés.</p></article>
+    <article class="card spotlight"><h2>Arbitrage recommandé</h2><p>Au regard du résultat provisoire, de la trésorerie disponible, de la rémunération déjà versée et de l’objectif retenu, l’option active consiste à retenir une rémunération complémentaire de <strong>${euro(rec.remunerationBrute)}</strong> et une distribution de dividendes de <strong>${euro(rec.dividends.dividendeVerse)}</strong>. Cette option aboutit à un montant perçu par le foyer de <strong>${euro(rec.netTotalFoyer)}</strong>, avec une trésorerie restante de <strong>${euro(rec.tresorerieRestante)}</strong>, un IS de <strong>${euro(rec.corporateTax.isTotal)}</strong> et <strong>${rec.retraite.trimestresValides}/4</strong> trimestres validés.</p></article>
     <div class="grid three">${options.map((o) => optionCard(o.label, o.data)).join('')}</div>
     <article class="card"><h3>Alertes principales</h3>${[...new Set(options.flatMap((o) => o.data.alerts))].map((a) => `<span class="badge warn">${a}</span>`).join('') || '<span class="badge ok">Aucune alerte majeure</span>'}</article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'comparaison' ? 'on' : ''}" id="comparaison">
+  <section class="view ${state.ui.activeTab === 'comparaison' ? 'on' : ''}">
     <article class="card"><h2>Comparaison des 3 options utiles</h2><div class="grid three">${options.map((o) => optionCard(o.label, o.data)).join('')}</div></article>
     <article class="card"><h3>Comparaison interactive</h3>${barsCompare(options)}</article>
     <article class="card"><h3>Courbe d’optimisation (net foyer selon rémunération)</h3>${optimisationChart(result.optimisationCurve, rec.remunerationBrute)}</article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'flux' ? 'on' : ''}" id="flux">
+  <section class="view ${state.ui.activeTab === 'flux' ? 'on' : ''}">
     <article class="card"><h2>Flux financiers</h2><p>Lecture pédagogique de l’origine et de la destination de l’argent de la société.</p>${waterfall(rec, state)}</article>
     <article class="card"><h3>Où part 1 € généré</h3><div class="grid four">
       <div><small>Salaire brut</small><b>${percent(rec.fluxRepartition.salaireBrut / Math.max(1, state.societe.resultatProvisoire))}</b></div>
@@ -115,7 +158,7 @@ export const render = (root, state, result, onUpdate) => {
     </div></article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'social' ? 'on' : ''}" id="social">
+  <section class="view ${state.ui.activeTab === 'social' ? 'on' : ''}">
     <article class="card"><h2>Cotisations sociales</h2>
       <table><tr><th>Élément</th><th>Formule</th><th>Montant</th></tr>
       <tr><td>Salaire brut complémentaire</td><td>R</td><td>${euro(rec.payroll.remunerationBrute)}</td></tr>
@@ -125,18 +168,11 @@ export const render = (root, state, result, onUpdate) => {
       <tr><td>Net avant IR</td><td>R - charges salariales</td><td>${euro(rec.payroll.netAvantIR)}</td></tr>
       <tr><td>Net après IR</td><td>Net avant IR - IR additionnel</td><td>${euro(rec.salaireNetApresIR)}</td></tr>
       </table>
-      <h3>Déperdition visuelle</h3>
-      ${waterfall({
-        payroll: rec.payroll,
-        corporateTax: { isTotal: 0 },
-        dividends: { dividendeVerse: 0 },
-        tresorerieRestante: rec.salaireNetApresIR,
-      }, { societe: { resultatProvisoire: rec.payroll.coutTotalEntreprise } })}
     </article>
     <article class="card"><h3>Validation retraite</h3><p>Rémunération déjà versée: ${euro(state.societe.remunerationDejaVersee)} • Complément: ${euro(rec.remunerationBrute)} • Total annuel soumis: ${euro(rec.retraite.remunerationAnnuelleSoumise)} • Seuil trimestre: ${euro(state.params.seuilTrimestre)} • <strong>${rec.retraite.trimestresValides}/4</strong></p></article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'fiscalite' ? 'on' : ''}" id="fiscalite">
+  <section class="view ${state.ui.activeTab === 'fiscalite' ? 'on' : ''}">
     <article class="card"><h2>Fiscalité détaillée</h2>
       <h3>IS par paliers</h3>
       <table><tr><th>Poste</th><th>Montant</th></tr>
@@ -163,7 +199,7 @@ export const render = (root, state, result, onUpdate) => {
     <article class="card"><h3>Radar d’équilibre</h3>${radarFake(rec, state)}</article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'parametres' ? 'on' : ''}" id="parametres">
+  <section class="view ${state.ui.activeTab === 'parametres' ? 'on' : ''}">
     <article class="card"><h2>Paramètres de calcul</h2>
       <div class="grid four">
         <label>Taux patronal<input type="number" step="0.01" data-k="params.tauxPatronal" value="${state.params.tauxPatronal}" /></label>
@@ -178,10 +214,7 @@ export const render = (root, state, result, onUpdate) => {
         <label>Rémunération min<input type="number" step="100" data-k="params.plancherRemuneration" value="${state.params.plancherRemuneration}" /></label>
         <label>Rémunération max<input type="number" step="100" data-k="params.plafondRemuneration" value="${state.params.plafondRemuneration}" /></label>
         <label>Niveaux dividendes testés<input type="number" step="1" data-k="params.niveauxDividendes" value="${state.params.niveauxDividendes}" /></label>
-        <label>Réserve minimale de trésorerie à conserver<input type="number" step="100" data-k="societe.reserveSecurite" value="${state.societe.reserveSecurite}" /></label>
-        <label>Objectif<select data-k="objectif">${OBJECTIFS.map((o) => `<option value="${o.value}" ${state.objectif === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>
       </div>
-      <p class="note">La réserve minimale protège l’entreprise contre un arbitrage trop agressif : toute option sous ce seuil est non admissible.</p>
       <h3>Barème IR paramétrable</h3>
       <table><tr><th>Tranche</th><th>Min</th><th>Max</th><th>Taux</th></tr>
       ${state.params.baremeIR.map((t, i) => `<tr><td>T${i + 1}</td><td><input type="number" data-k="params.baremeIR.${i}.min" value="${t.min}"/></td><td><input type="number" data-k="params.baremeIR.${i}.max" value="${t.max}"/></td><td><input type="number" step="0.01" data-k="params.baremeIR.${i}.taux" value="${t.taux}"/></td></tr>`).join('')}
@@ -189,22 +222,14 @@ export const render = (root, state, result, onUpdate) => {
     </article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'synthese' ? 'on' : ''}" id="synthese">
+  <section class="view ${state.ui.activeTab === 'synthese' ? 'on' : ''}">
     <article class="card print-area"><h2>Note de synthèse cabinet / client</h2>
       <p><strong>${state.societe.raisonSociale}</strong> • Exercice ${state.societe.exercice} • Clôture ${state.societe.dateCloture}</p>
-      <p>L’option recommandée retient une rémunération complémentaire de ${euro(rec.remunerationBrute)} et un dividende de ${euro(rec.dividends.dividendeVerse)}. Elle conduit à un montant perçu par le foyer de ${euro(rec.netTotalFoyer)} avec un IS de ${euro(rec.corporateTax.isTotal)} et une trésorerie restante de ${euro(rec.tresorerieRestante)}.</p>
-      <ul>
-        <li>Montant réellement perçu par le foyer: ${euro(rec.netTotalFoyer)}</li>
-        <li>Salaire net dirigeant après IR: ${euro(rec.salaireNetApresIR)}</li>
-        <li>Dividendes nets: ${euro(rec.dividends.netDividendes)}</li>
-        <li>IR additionnel du scénario: ${euro(rec.householdTax.irAdditionnel)}</li>
-        <li>Trimestres validés: ${rec.retraite.trimestresValides}/4</li>
-      </ul>
-      ${rec.alerts.length ? `<p><strong>Vigilances:</strong> ${rec.alerts.join(' ')}</p>` : '<p>Aucune vigilance majeure.</p>'}
+      <p>L’option active retient une rémunération complémentaire de ${euro(rec.remunerationBrute)} et un dividende de ${euro(rec.dividends.dividendeVerse)}. Elle conduit à un montant perçu par le foyer de ${euro(rec.netTotalFoyer)} avec un IS de ${euro(rec.corporateTax.isTotal)} et une trésorerie restante de ${euro(rec.tresorerieRestante)}.</p>
     </article>
   </section>
 
-  <section class="view ${state.ui.activeTab === 'annexes' ? 'on' : ''}" id="annexes">
+  <section class="view ${state.ui.activeTab === 'annexes' ? 'on' : ''}">
     <article class="card"><h2>Annexes techniques</h2>
       <h3>Formules utilisées</h3>
       <ul>
@@ -213,22 +238,21 @@ export const render = (root, state, result, onUpdate) => {
         <li>Résultat fiscal = résultat provisoire - rémunération brute - charges patronales</li>
         <li>IS = base réduite × taux réduit + base normale × taux normal</li>
         <li>Dividende versé ≤ min(distribuable théorique, capacité de trésorerie)</li>
-        <li>IR foyer par quotient familial et barème progressif paramétrable</li>
-        <li>Trimestres = min(4, floor(rémunération annuelle / seuil trimestre))</li>
       </ul>
-      <h3>Hypothèses et méthode</h3>
       <ul>${result.hypotheses.map((h) => `<li>${h}</li>`).join('')}</ul>
       <p>Combinaisons testées: ${result.testedCount} • Options admissibles: ${result.admissibleCount}</p>
-      <p class="note">Avertissement méthodologique: ce modèle est indicatif, simplifié et paramétrable; il ne se substitue pas à une validation professionnelle.</p>
     </article>
   </section>
   `;
 
   root.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => onUpdate('ui.activeTab', el.dataset.tab)));
   root.querySelectorAll('[data-k]').forEach((el) => {
-    el.addEventListener('change', (e) => {
+    const evt = ['INPUT', 'TEXTAREA'].includes(el.tagName) ? 'input' : 'change';
+    el.addEventListener(evt, (e) => {
       const path = e.target.dataset.k;
-      const val = e.target.type === 'number' ? Number(e.target.value) : e.target.value;
+      let val;
+      if (e.target.tagName === 'SELECT' && (e.target.value === 'true' || e.target.value === 'false')) val = e.target.value === 'true';
+      else val = e.target.type === 'number' ? Number(e.target.value) : e.target.value;
       onUpdate(path, val);
     });
   });

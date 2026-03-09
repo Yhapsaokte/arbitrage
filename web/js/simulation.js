@@ -19,14 +19,15 @@ export const computeCorporateTax = (resultatProvisoire, payroll, params) => {
   return { resultatFiscal, baseReduite, baseNormale, isReduit, isNormal, isTotal, resultatApresIS };
 };
 
-export const computeDividends = (corporateTax, tresorerieDisponible, reserveSecurite, payroll, dividendRatio, params) => {
+export const computeDividends = (corporateTax, tresorerieDisponible, reserveSecurite, payroll, dividendRatio, params, manualDividend) => {
   const distribuableTheorique = Math.max(0, corporateTax.resultatApresIS);
   const capaciteTresorerie = Math.max(0, tresorerieDisponible - reserveSecurite - payroll.coutTotalEntreprise);
   const dividendeMaxSoutenable = Math.min(distribuableTheorique, capaciteTresorerie);
-  const dividendeVerse = dividendeMaxSoutenable * dividendRatio;
+  const dividendeCible = manualDividend != null ? manualDividend : dividendeMaxSoutenable * (dividendRatio ?? 0);
+  const dividendeVerse = clamp(dividendeCible, 0, dividendeMaxSoutenable);
   const pfu = dividendeVerse * params.tauxPFU;
   const netDividendes = dividendeVerse - pfu;
-  return { distribuableTheorique, capaciteTresorerie, dividendeMaxSoutenable, dividendeVerse, pfu, netDividendes };
+  return { distribuableTheorique, capaciteTresorerie, dividendeMaxSoutenable, dividendeVerse, pfu, netDividendes, dividendeCible };
 };
 
 const computeIRByScale = (base, parts, bareme) => {
@@ -72,10 +73,18 @@ export const computeRetirementQuarters = (remunerationDejaVersee, remunerationBr
   return { remunerationAnnuelleSoumise, trimestresValides };
 };
 
-export const evaluateScenario = (input, remunerationBrute, dividendRatio) => {
+export const evaluateScenario = (input, remunerationBrute, dividendRatio = 0, manualDividend = null) => {
   const payroll = computePayroll(remunerationBrute, input.params);
   const corporateTax = computeCorporateTax(input.societe.resultatProvisoire, payroll, input.params);
-  const dividends = computeDividends(corporateTax, input.societe.tresorerieDisponible, input.societe.reserveSecurite, payroll, dividendRatio, input.params);
+  const dividends = computeDividends(
+    corporateTax,
+    input.societe.tresorerieDisponible,
+    input.societe.reserveSecurite,
+    payroll,
+    dividendRatio,
+    input.params,
+    manualDividend,
+  );
   const householdTax = computeHouseholdIncomeTax(input.foyer, payroll, input.params);
   const retraite = computeRetirementQuarters(input.societe.remunerationDejaVersee, remunerationBrute, input.params);
 
@@ -98,6 +107,7 @@ export const evaluateScenario = (input, remunerationBrute, dividendRatio) => {
   if (retraite.trimestresValides < 4) alerts.push('Moins de 4 trimestres validés.');
   if (dividends.dividendeVerse <= 0) alerts.push('Pas de dividendes versés dans cette option.');
   if (householdTax.irAdditionnel > 5000) alerts.push('Augmentation sensible de l’IR estimatif.');
+  if (manualDividend != null && manualDividend > dividends.dividendeMaxSoutenable) alerts.push('Dividende manuel plafonné au maximum soutenable.');
 
   const admissible = corporateTax.resultatFiscal >= 0 && tresorerieRestante >= input.societe.reserveSecurite;
 

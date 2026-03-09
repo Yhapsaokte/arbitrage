@@ -1,5 +1,5 @@
 export const DEFAULT_INPUT = {
-  ui: { activeTab: 'dashboard' },
+  ui: { activeTab: 'entrees' },
   societe: {
     raisonSociale: 'Aster Ingénierie Conseil SAS',
     exercice: '2026',
@@ -17,6 +17,12 @@ export const DEFAULT_INPUT = {
     revenusLMNP: 9800,
     salaireConjoint: 26000,
     autresRevenusImposables: 3500,
+  },
+  simulation: {
+    mode: 'automatique',
+    remunerationBruteManuelle: 25000,
+    dividendeManuelActif: false,
+    dividendeManuel: 15000,
   },
   objectif: 'equilibre',
   params: {
@@ -51,6 +57,7 @@ export const OBJECTIFS = [
 ];
 
 export const TABS = [
+  ['entrees', 'Entrées'],
   ['dashboard', 'Dashboard'],
   ['comparaison', 'Comparaison'],
   ['flux', 'Flux financiers'],

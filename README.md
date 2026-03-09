@@ -2,12 +2,15 @@
 
 Application web premium (statique modulaire) d’aide à la décision pour cabinet comptable.
 
-## Ce que fait l’outil
-- Optimise automatiquement l’arbitrage **rémunération complémentaire / dividendes**.
-- Retient uniquement 3 options utiles : **recommandée**, **prudente**, **maximisation du net**.
-- Explique les calculs social, fiscal, trésorerie et retraite de façon transparente.
+## Points clés
+- Optimisation automatique de l’arbitrage rémunération/dividendes.
+- Simulation manuelle pilotée par l’utilisateur (rémunération + dividende manuel optionnel).
+- 3 options utiles uniquement : recommandée, prudente, maximisation du net.
+- Calculs détaillés et transparents : social, IS, IR, dividendes, trésorerie, retraite.
 
-## Navigation par onglets
+## Interface
+Navigation par onglets :
+- Entrées
 - Dashboard
 - Comparaison
 - Flux financiers
@@ -17,13 +20,10 @@ Application web premium (statique modulaire) d’aide à la décision pour cabin
 - Synthèse
 - Annexes techniques
 
-## Architecture
-- `web/js/simulation.js` : moteur de calcul détaillé
-- `web/js/optimizer.js` : moteur d’optimisation
-- `web/js/ui.js` : UI + onglets + visualisations
-- `web/js/constants.js` : hypothèses et paramètres
-- `web/js/state.js` : persistance locale
-- `web/js/main.js` : orchestration
+## Entrées éditables (sans coder)
+- Société : raison sociale, exercice, activité, résultat provisoire, trésorerie, rémunération déjà versée, réserve minimale.
+- Foyer : parts, salaire conjoint, revenus LMNP, autres revenus.
+- Simulation : objectif, mode automatique/manuel, rémunération brute manuelle, dividende manuel.
 
 ## Démarrage
 ```bash
