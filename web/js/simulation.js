@@ -1,33 +1,86 @@
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-export const computePayroll = (remunerationBrute, params) => {
-  const chargesPatronales = remunerationBrute * params.tauxPatronal;
-  const chargesSalariales = remunerationBrute * params.tauxSalarial;
-  const coutTotalEntreprise = remunerationBrute + chargesPatronales;
-  const netAvantIR = remunerationBrute - chargesSalariales;
-  return { remunerationBrute, chargesPatronales, chargesSalariales, coutTotalEntreprise, netAvantIR };
+// === 1) Chaîne sociale ===
+export const computePayroll = (remunerationBruteComplementaire, params) => {
+  const chargesPatronales = remunerationBruteComplementaire * params.tauxPatronal;
+  const chargesSalariales = remunerationBruteComplementaire * params.tauxSalarial;
+  const coutTotalRemuneration = remunerationBruteComplementaire + chargesPatronales;
+  const netAvantIR = remunerationBruteComplementaire - chargesSalariales;
+  return {
+    remunerationBruteComplementaire,
+    chargesPatronales,
+    chargesSalariales,
+    coutTotalRemuneration,
+    netAvantIR,
+  };
 };
 
+// === 2) Chaîne résultat comptable/fiscal ===
 export const computeCorporateTax = (resultatProvisoire, payroll, params) => {
-  const resultatFiscal = resultatProvisoire - payroll.remunerationBrute - payroll.chargesPatronales;
+  const resultatFiscal =
+    resultatProvisoire - payroll.remunerationBruteComplementaire - payroll.chargesPatronales;
+
   const baseReduite = clamp(resultatFiscal, 0, params.plafondISReduit);
   const baseNormale = Math.max(0, resultatFiscal - params.plafondISReduit);
+
   const isReduit = baseReduite * params.tauxISReduit;
   const isNormal = baseNormale * params.tauxISNormal;
   const isTotal = isReduit + isNormal;
+
   const resultatApresIS = resultatFiscal - isTotal;
-  return { resultatFiscal, baseReduite, baseNormale, isReduit, isNormal, isTotal, resultatApresIS };
+  const dividendeDistribuableTheorique = Math.max(resultatApresIS, 0);
+
+  return {
+    resultatProvisoire,
+    resultatFiscal,
+    baseReduite,
+    baseNormale,
+    isReduit,
+    isNormal,
+    isTotal,
+    resultatApresIS,
+    dividendeDistribuableTheorique,
+  };
 };
 
-export const computeDividends = (corporateTax, tresorerieDisponible, reserveSecurite, payroll, dividendRatio, params, manualDividend) => {
-  const distribuableTheorique = Math.max(0, corporateTax.resultatApresIS);
-  const capaciteTresorerie = Math.max(0, tresorerieDisponible - reserveSecurite - payroll.coutTotalEntreprise);
-  const dividendeMaxSoutenable = Math.min(distribuableTheorique, capaciteTresorerie);
-  const dividendeCible = manualDividend != null ? manualDividend : dividendeMaxSoutenable * (dividendRatio ?? 0);
-  const dividendeVerse = clamp(dividendeCible, 0, dividendeMaxSoutenable);
+// === 3) Chaîne de dividendes (contrainte résultat + trésorerie) ===
+export const computeDividends = (
+  corporateTax,
+  tresorerieInitiale,
+  reserveMinimale,
+  payroll,
+  dividendRatio,
+  params,
+  manualDividend,
+) => {
+  const sortieRemuneration = payroll.coutTotalRemuneration;
+  const sortieIS = corporateTax.isTotal;
+
+  const maxParResultat = corporateTax.dividendeDistribuableTheorique;
+  const maxParTresorerie = Math.max(
+    0,
+    tresorerieInitiale - reserveMinimale - sortieRemuneration - sortieIS,
+  );
+
+  const dividendeMaxSoutenable = Math.min(maxParResultat, maxParTresorerie);
+  const cible = manualDividend != null ? manualDividend : dividendeMaxSoutenable * (dividendRatio ?? 0);
+  const dividendeVerse = clamp(cible, 0, dividendeMaxSoutenable);
+
   const pfu = dividendeVerse * params.tauxPFU;
-  const netDividendes = dividendeVerse - pfu;
-  return { distribuableTheorique, capaciteTresorerie, dividendeMaxSoutenable, dividendeVerse, pfu, netDividendes, dividendeCible };
+  const dividendeNet = dividendeVerse - pfu;
+
+  return {
+    maxParResultat,
+    maxParTresorerie,
+    dividendeMaxSoutenable,
+    dividendeCible: cible,
+    dividendeVerse,
+    pfu,
+    dividendeNet,
+    contraintesRespectees:
+      dividendeVerse <= corporateTax.dividendeDistribuableTheorique &&
+      dividendeVerse <= maxParTresorerie,
+  };
 };
 
 const computeIRByScale = (base, parts, bareme) => {
@@ -35,46 +88,74 @@ const computeIRByScale = (base, parts, bareme) => {
   const lignes = [];
   let irParPart = 0;
   let tmi = 0;
-  bareme.forEach((t, i) => {
-    const assiette = Math.max(0, Math.min(revenuParPart, t.max) - t.min);
-    const impot = assiette * t.taux;
-    if (assiette > 0) tmi = t.taux;
+
+  bareme.forEach((tranche, i) => {
+    const assiette = Math.max(0, Math.min(revenuParPart, tranche.max) - tranche.min);
+    const impot = assiette * tranche.taux;
+    if (assiette > 0) tmi = tranche.taux;
     irParPart += impot;
-    lignes.push({ index: i + 1, min: t.min, max: t.max, taux: t.taux, assiette, impotParPart: impot });
+    lignes.push({
+      index: i + 1,
+      min: tranche.min,
+      max: tranche.max,
+      taux: tranche.taux,
+      assiette,
+      impotParPart: impot,
+    });
   });
-  return { revenuParPart, irParPart, irTotal: irParPart * Math.max(parts, 1), tmi, lignes };
+
+  return { revenuParPart, irTotal: irParPart * Math.max(parts, 1), tmi, lignes };
 };
 
+// === 4) Chaîne fiscalité personnelle ===
 export const computeHouseholdIncomeTax = (foyer, payroll, params) => {
-  const baseRemunerationImposable = payroll.netAvantIR * (1 - params.abattementSalaireIR);
-  const baseFoyerTotale =
-    foyer.autresRevenus + foyer.revenusLMNP + foyer.salaireConjoint + foyer.autresRevenusImposables + baseRemunerationImposable;
-  const baseReference = foyer.autresRevenus + foyer.revenusLMNP + foyer.salaireConjoint + foyer.autresRevenusImposables;
+  const baseRemunerationIR = payroll.netAvantIR * (1 - params.abattementSalaireIR);
 
-  const simule = computeIRByScale(baseFoyerTotale, foyer.parts, params.baremeIR);
+  const baseImposableTotale =
+    baseRemunerationIR +
+    foyer.salaireConjoint +
+    foyer.revenusLMNP +
+    foyer.autresRevenus +
+    foyer.autresRevenusImposables;
+
+  const baseReference =
+    foyer.salaireConjoint +
+    foyer.revenusLMNP +
+    foyer.autresRevenus +
+    foyer.autresRevenusImposables;
+
+  const simule = computeIRByScale(baseImposableTotale, foyer.parts, params.baremeIR);
   const reference = computeIRByScale(baseReference, foyer.parts, params.baremeIR);
 
   return {
-    baseRemunerationImposable,
-    baseFoyerTotale,
-    baseReference,
+    baseRemunerationIR,
+    baseImposableTotale,
     quotientFamilial: simule.revenuParPart,
+    tmi: simule.tmi,
     irTotal: simule.irTotal,
     irReference: reference.irTotal,
-    irAdditionnel: Math.max(0, simule.irTotal - reference.irTotal),
-    tmi: simule.tmi,
+    surcoutIRScenario: Math.max(0, simule.irTotal - reference.irTotal),
     lignesBareme: simule.lignes,
   };
 };
 
-export const computeRetirementQuarters = (remunerationDejaVersee, remunerationBrute, params) => {
-  const remunerationAnnuelleSoumise = remunerationDejaVersee + remunerationBrute;
-  const trimestresValides = Math.min(4, Math.floor(remunerationAnnuelleSoumise / params.seuilTrimestre));
-  return { remunerationAnnuelleSoumise, trimestresValides };
+export const computeRetirementQuarters = (remunerationDejaVersee, remunerationBruteComplementaire, params) => {
+  const remunerationAnnuelleSoumiseCotisations =
+    remunerationDejaVersee + remunerationBruteComplementaire;
+  const trimestresValides = Math.min(
+    4,
+    Math.floor(remunerationAnnuelleSoumiseCotisations / params.seuilTrimestre),
+  );
+  return { remunerationAnnuelleSoumiseCotisations, trimestresValides };
 };
 
-export const evaluateScenario = (input, remunerationBrute, dividendRatio = 0, manualDividend = null) => {
-  const payroll = computePayroll(remunerationBrute, input.params);
+export const evaluateScenario = (
+  input,
+  remunerationBruteComplementaire,
+  dividendRatio = 0,
+  manualDividend = null,
+) => {
+  const payroll = computePayroll(remunerationBruteComplementaire, input.params);
   const corporateTax = computeCorporateTax(input.societe.resultatProvisoire, payroll, input.params);
   const dividends = computeDividends(
     corporateTax,
@@ -86,44 +167,70 @@ export const evaluateScenario = (input, remunerationBrute, dividendRatio = 0, ma
     manualDividend,
   );
   const householdTax = computeHouseholdIncomeTax(input.foyer, payroll, input.params);
-  const retraite = computeRetirementQuarters(input.societe.remunerationDejaVersee, remunerationBrute, input.params);
+  const retraite = computeRetirementQuarters(
+    input.societe.remunerationDejaVersee,
+    remunerationBruteComplementaire,
+    input.params,
+  );
 
-  const salaireNetApresIR = payroll.netAvantIR - householdTax.irAdditionnel;
-  const netTotalFoyer = salaireNetApresIR + dividends.netDividendes;
-  const sortieTresorerie = payroll.coutTotalEntreprise + dividends.dividendeVerse;
-  const tresorerieRestante = input.societe.tresorerieDisponible - sortieTresorerie;
+  // Chaîne trésorerie stricte
+  const sortieRemuneration = payroll.coutTotalRemuneration;
+  const sortieIS = corporateTax.isTotal;
+  const sortieDividendes = dividends.dividendeVerse;
+  const sortieTresorerieTotale = sortieRemuneration + sortieIS + sortieDividendes;
+  const tresorerieFinale = input.societe.tresorerieDisponible - sortieTresorerieTotale;
 
-  const fluxRepartition = {
-    salaireBrut: payroll.remunerationBrute,
-    chargesPatronales: payroll.chargesPatronales,
-    is: corporateTax.isTotal,
-    dividendes: dividends.dividendeVerse,
-  };
+  const sommeFluxTresorerie = input.societe.tresorerieDisponible - sortieTresorerieTotale;
+  const coherenceTresorerieOk = Math.abs(sommeFluxTresorerie - tresorerieFinale) < 0.0001;
+
+  const salaireNetApresIR = payroll.netAvantIR - householdTax.surcoutIRScenario;
+  const netTotalFoyer = salaireNetApresIR + dividends.dividendeNet;
 
   const alerts = [];
-  if (corporateTax.resultatFiscal < 0) alerts.push('Rémunération trop élevée au regard du résultat.');
-  if (tresorerieRestante < 0) alerts.push('Trésorerie négative : option non admissible.');
-  if (tresorerieRestante < input.societe.reserveSecurite) alerts.push('Réserve minimale non respectée.');
+  if (corporateTax.resultatFiscal < 0) alerts.push('Résultat fiscal négatif : option non admissible.');
+  if (tresorerieFinale < input.societe.reserveSecurite)
+    alerts.push('Réserve minimale de trésorerie non respectée.');
   if (retraite.trimestresValides < 4) alerts.push('Moins de 4 trimestres validés.');
-  if (dividends.dividendeVerse <= 0) alerts.push('Pas de dividendes versés dans cette option.');
-  if (householdTax.irAdditionnel > 5000) alerts.push('Augmentation sensible de l’IR estimatif.');
-  if (manualDividend != null && manualDividend > dividends.dividendeMaxSoutenable) alerts.push('Dividende manuel plafonné au maximum soutenable.');
+  if (!dividends.contraintesRespectees)
+    alerts.push('Dividende non conforme aux contraintes (résultat/trésorerie).');
+  if (manualDividend != null && manualDividend > dividends.dividendeMaxSoutenable)
+    alerts.push('Dividende manuel plafonné au maximum soutenable.');
+  if (!coherenceTresorerieOk)
+    alerts.push('Erreur interne : incohérence des flux de trésorerie.');
 
-  const admissible = corporateTax.resultatFiscal >= 0 && tresorerieRestante >= input.societe.reserveSecurite;
+  const admissible =
+    corporateTax.resultatFiscal >= 0 &&
+    tresorerieFinale >= input.societe.reserveSecurite &&
+    dividends.contraintesRespectees &&
+    coherenceTresorerieOk;
 
   return {
-    remunerationBrute,
-    dividendRatio,
     payroll,
     corporateTax,
     dividends,
     householdTax,
     retraite,
+    // résultats consolidés
     salaireNetApresIR,
     netTotalFoyer,
-    sortieTresorerie,
-    tresorerieRestante,
-    fluxRepartition,
+    // chaîne trésorerie
+    tresorerie: {
+      tresorerieInitiale: input.societe.tresorerieDisponible,
+      sortieRemuneration,
+      sortieIS,
+      sortieDividendes,
+      sortieTresorerieTotale,
+      tresorerieFinale,
+      sommeFluxTresorerie,
+      coherenceTresorerieOk,
+    },
+    // vue structurée chaîne résultat
+    resultat: {
+      resultatProvisoire: corporateTax.resultatProvisoire,
+      resultatFiscal: corporateTax.resultatFiscal,
+      resultatApresIS: corporateTax.resultatApresIS,
+      dividendeDistribuableTheorique: corporateTax.dividendeDistribuableTheorique,
+    },
     admissible,
     alerts,
   };

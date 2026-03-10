@@ -8,12 +8,12 @@ const main = readFileSync('web/js/main.js', 'utf8');
 
 const checks = [
   [constants.includes("['entrees', 'Entrées']"), 'Onglet Entrées manquant'],
-  [constants.includes('simulation'), 'State simulation manquant'],
+  [simulation.includes('computeCorporateTax') && simulation.includes('computeDividends') && simulation.includes('computeHouseholdIncomeTax'), 'Chaînes de calcul séparées manquantes'],
+  [simulation.includes('sortieTresorerieTotale') && simulation.includes('coherenceTresorerieOk'), 'Chaîne trésorerie incohérente'],
   [simulation.includes('manualDividend'), 'Gestion dividende manuel manquante'],
-  [optimizer.includes('pickRecommendedOptions'), 'pickRecommendedOptions manquant'],
-  [main.includes('simulation.mode'), 'Mode manuel non branché'],
-  [ui.includes('Mode') && ui.includes('Rémunération brute complémentaire manuelle'), 'Champs de saisie manuels absents'],
-  [ui.includes('Raison sociale') && ui.includes('Trésorerie disponible') && ui.includes('Nombre de parts'), 'Formulaire Entrées incomplet'],
+  [optimizer.includes('pickRecommendedOptions') && optimizer.includes('[0, 0.25, 0.5, 0.75, 1]'), 'Optimisation structurée manquante'],
+  [main.includes('simulation.mode') && main.includes('evaluateScenario'), 'Mode manuel non branché'],
+  [ui.includes('Rémunération brute manuelle') && ui.includes('Dividende manuel') && ui.includes('Trésorerie disponible'), 'Formulaire interactif incomplet'],
 ];
 
 const failed = checks.filter(([ok]) => !ok);

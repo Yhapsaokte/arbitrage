@@ -32,21 +32,24 @@ const computeResult = () => {
     recommended: manual,
     hypotheses: [
       ...auto.hypotheses,
-      'Mode manuel actif : la recommandation affichée est basée sur votre saisie personnalisée.',
-      state.simulation.dividendeManuelActif
-        ? 'Dividende manuel activé (avec contrôle de cohérence et plafonnement).'
-        : 'Dividende manuel désactivé (dividende automatique selon contraintes).',
+      'Mode manuel actif : calcul basé sur la rémunération et le dividende saisis.',
     ],
   };
 };
 
+let rerenderTimer;
 const rerender = () => {
-  const result = computeResult();
-  render(root, state, result, (path, value) => {
-    setByPath(state, path, value);
-    saveState();
-    rerender();
-  });
+  clearTimeout(rerenderTimer);
+  rerenderTimer = setTimeout(() => {
+    const y = window.scrollY;
+    const result = computeResult();
+    render(root, state, result, (path, value) => {
+      setByPath(state, path, value);
+      saveState();
+      rerender();
+    });
+    window.scrollTo({ top: y, behavior: 'auto' });
+  }, 20);
 };
 
 loadState();

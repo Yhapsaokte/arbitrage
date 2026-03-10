@@ -2,28 +2,18 @@
 
 Application web premium (statique modulaire) d’aide à la décision pour cabinet comptable.
 
-## Points clés
-- Optimisation automatique de l’arbitrage rémunération/dividendes.
-- Simulation manuelle pilotée par l’utilisateur (rémunération + dividende manuel optionnel).
-- 3 options utiles uniquement : recommandée, prudente, maximisation du net.
-- Calculs détaillés et transparents : social, IS, IR, dividendes, trésorerie, retraite.
+## Priorités de cette version
+- Cohérence économique stricte avec séparation des 4 chaînes :
+  1. résultat comptable/fiscal,
+  2. dividende distribuable,
+  3. trésorerie,
+  4. fiscalité personnelle.
+- Formulaire d’entrées entièrement éditable.
+- Deux modes explicites : automatique / manuel.
+- Contrôles de cohérence (dividendes contraints + vérification interne trésorerie).
 
 ## Interface
-Navigation par onglets :
-- Entrées
-- Dashboard
-- Comparaison
-- Flux financiers
-- Cotisations sociales
-- Fiscalité
-- Paramètres
-- Synthèse
-- Annexes techniques
-
-## Entrées éditables (sans coder)
-- Société : raison sociale, exercice, activité, résultat provisoire, trésorerie, rémunération déjà versée, réserve minimale.
-- Foyer : parts, salaire conjoint, revenus LMNP, autres revenus.
-- Simulation : objectif, mode automatique/manuel, rémunération brute manuelle, dividende manuel.
+Navigation par onglets : Entrées, Dashboard, Comparaison, Flux financiers, Cotisations sociales, Fiscalité, Paramètres, Synthèse, Annexes techniques.
 
 ## Démarrage
 ```bash
